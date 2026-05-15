@@ -74,8 +74,15 @@ jobs:
     environment: staging
 
     steps:
-      - name: Deploy staging placeholder
-        run: echo "Deploy STAGING (placeholder): Render/VPS/API."
+      - name: Trigger staging deploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.REPO3_RENDER_STAGING_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "REPO3_RENDER_STAGING_DEPLOY_HOOK no configurado. Saltando deploy real."
+            exit 0
+          fi
+          curl -fsS -X POST "$DEPLOY_HOOK"
 
   smoke_staging:
     name: 5) Smoke Test Staging
@@ -84,8 +91,15 @@ jobs:
     if: github.event_name == 'push' && (github.ref_name == 'develop' || github.ref_name == 'release')
 
     steps:
-      - name: Smoke test placeholder
-        run: echo "Smoke test STAGING (placeholder): curl health endpoint."
+      - name: Validate staging health endpoint
+        env:
+          STAGING_URL: ${{ vars.REPO3_STAGING_URL }}
+        run: |
+          if [ -z "$STAGING_URL" ]; then
+            echo "REPO3_STAGING_URL no configurado. Saltando smoke test."
+            exit 0
+          fi
+          curl -fsS "$STAGING_URL/health.php"
 
   approve_production:
     name: 6) Manual Approval Production
@@ -106,5 +120,22 @@ jobs:
     environment: production
 
     steps:
-      - name: Deploy production placeholder
-        run: echo "Deploy PRODUCTION (placeholder): Render/VPS/API."
+      - name: Trigger production deploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.REPO3_RENDER_PRODUCTION_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "REPO3_RENDER_PRODUCTION_DEPLOY_HOOK no configurado. Saltando deploy real."
+            exit 0
+          fi
+          curl -fsS -X POST "$DEPLOY_HOOK"
+
+      - name: Validate production health endpoint
+        env:
+          PRODUCTION_URL: ${{ vars.REPO3_PRODUCTION_URL }}
+        run: |
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo "REPO3_PRODUCTION_URL no configurado. Saltando smoke test prod."
+            exit 0
+          fi
+          curl -fsS "$PRODUCTION_URL/health.php"

@@ -15,6 +15,24 @@
 	- `7) Deploy Production` (push a `release/main`)
 5. Flujo recomendado: `develop -> release -> main`.
 
+## Activar despliegue real en GitHub
+
+Configura en GitHub (Repo Settings):
+
+1. Secrets
+	- `REPO3_RENDER_STAGING_DEPLOY_HOOK`
+	- `REPO3_RENDER_PRODUCTION_DEPLOY_HOOK`
+2. Variables
+	- `REPO3_STAGING_URL` (ej: `https://sudoku-repo3-staging.onrender.com`)
+	- `REPO3_PRODUCTION_URL` (ej: `https://sudoku-repo3.onrender.com`)
+3. Environments
+	- `staging`
+	- `production` (con required reviewers para gate manual)
+
+Workflow ejecutable en repo:
+
+- `.github/workflows/ci.yml`
+
 ## Comandos locales
 
 ```bash
