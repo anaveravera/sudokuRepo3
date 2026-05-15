@@ -1,13 +1,14 @@
-name: CI
+name: DevOps Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: ["develop", "release", "main"]
   pull_request:
-    branches: ["main"]
+    branches: ["develop", "release", "main"]
 
 jobs:
-  test:
+  quality:
+    name: 1) Quality Gate
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +22,89 @@ jobs:
           tools: composer
 
       - name: Install dependencies
-        run: composer install
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Lint entrypoint
+        run: php -l public/index.php
+
+  build_test:
+    name: 2) Build + Unit Tests
+    runs-on: ubuntu-latest
+    needs: [quality]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
 
       - name: Run tests
         run: vendor/bin/phpunit
+
+  package:
+    name: 3) Package Artifact
+    runs-on: ubuntu-latest
+    needs: [build_test]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create artifact
+        run: tar -czf sudoku-artifact.tar.gz public src tests composer.json composer.lock phpunit.xml
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sudoku-artifact
+          path: sudoku-artifact.tar.gz
+
+  deploy_staging:
+    name: 4) Deploy Staging
+    runs-on: ubuntu-latest
+    needs: [package]
+    if: github.event_name == 'push' && (github.ref_name == 'develop' || github.ref_name == 'release')
+    environment: staging
+
+    steps:
+      - name: Deploy staging placeholder
+        run: echo "Deploy STAGING (placeholder): Render/VPS/API."
+
+  smoke_staging:
+    name: 5) Smoke Test Staging
+    runs-on: ubuntu-latest
+    needs: [deploy_staging]
+    if: github.event_name == 'push' && (github.ref_name == 'develop' || github.ref_name == 'release')
+
+    steps:
+      - name: Smoke test placeholder
+        run: echo "Smoke test STAGING (placeholder): curl health endpoint."
+
+  approve_production:
+    name: 6) Manual Approval Production
+    runs-on: ubuntu-latest
+    needs: [package]
+    if: github.event_name == 'push' && (github.ref_name == 'release' || github.ref_name == 'main')
+    environment: production
+
+    steps:
+      - name: Await environment approval
+        run: echo "Waiting for manual approval from GitHub environment rules."
+
+  deploy_production:
+    name: 7) Deploy Production
+    runs-on: ubuntu-latest
+    needs: [approve_production]
+    if: github.event_name == 'push' && (github.ref_name == 'release' || github.ref_name == 'main')
+    environment: production
+
+    steps:
+      - name: Deploy production placeholder
+        run: echo "Deploy PRODUCTION (placeholder): Render/VPS/API."
